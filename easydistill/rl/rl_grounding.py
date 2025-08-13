@@ -1493,7 +1493,6 @@ def multi_box_format_reward(completions, **kwargs):
     
     for completion in completions:
         try:
-
             content = completion[0]["content"]
             response = eval(content.split('assistant\n')[-1].strip())
             for kk in [0,1,2,3]:
@@ -1632,23 +1631,7 @@ def multi_gaussian_point_reward(completions, solution, **kwargs):
         reward = 0.0
         try:
             response = eval(content.split('assistant\n')[-1].strip())
-
-            response[0]+=response[1]
-            response[0]+=response[2]
-            response[0]+=response[3]
-            response[1]=[]
-            response[2]=[]
-            response[3]=[]
-
             sol = {int(key): value for key, value in sol.items()}
-
-            sol[0]+=sol[1]
-            sol[0]+=sol[2]
-            sol[0]+=sol[3]
-            sol[1]=[]
-            sol[2]=[]
-            sol[3]=[]
-
             bbox_matches,_,__ = match_boxes(response,sol)
             
             reward=0.0
@@ -1728,23 +1711,7 @@ def multi_gaussian_plane_reward(completions, solution, **kwargs):
         reward = 0.0
         try:
             response = eval(content.split('assistant\n')[-1].strip())
-
-            response[0]+=response[1]
-            response[0]+=response[2]
-            response[0]+=response[3]
-            response[1]=[]
-            response[2]=[]
-            response[3]=[]
-
             sol = {int(key): value for key, value in sol.items()}
-
-            sol[0]+=sol[1]
-            sol[0]+=sol[2]
-            sol[0]+=sol[3]
-            sol[1]=[]
-            sol[2]=[]
-            sol[3]=[]
-
             bbox_matches,_,__ = match_boxes(response,sol)
             reward=0.0
             for match in bbox_matches[0]:
@@ -1873,6 +1840,7 @@ def main(script_args, training_args, model_args):
 
 
 if __name__ == "__main__":
+
     parser = TrlParser((GRPOScriptArguments, GRPOConfig, GRPOModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
     main(script_args, training_args, model_args)
