@@ -193,12 +193,11 @@ def process(job_type, config):
         cmd = ' '.join(cmd)
         logging.info(f"Running command: {cmd}")
         run_cmd(cmd)
-        
-    elif job_type in ["rl_grounding"]:
+    elif job_type in ["mmkd_rl_grounding"]:
         args=json.load(open(config))
 
         cmd=f"""
-        torchrun  easydistill/rl/rl_grounding.py \
+        torchrun  easydistill/mmkd/mmkd_rl_grounding.py \
             --deepspeed {args["training"]["deepspeed"]} \
             --output_dir {args["training"]["output_dir"]} \
             --model_name_or_path {args["models"]["student"]} \
@@ -221,10 +220,10 @@ def process(job_type, config):
             --save_only_model false \
             --beta 0.04  \
             --learning_rate {args["training"]["learning_rate"]} \
+            --reward_funcs {args["training"]["reward_funcs"]} 
         """
         logging.info(f"Running command: {cmd}")
         run_cmd(cmd)
-
     else:
         logging.error(f"Unknown job type: {job_type}")
         sys.exit(1)
