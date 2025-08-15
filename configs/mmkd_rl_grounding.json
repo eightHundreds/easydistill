@@ -1,12 +1,14 @@
 {
-  "job_type": "rl_grounding",
+  "job_type": "mmkd_rl_grounding",
   "dataset": {
     "labeled_path": "data/multi_box_grounding.yaml"
   },
   "models": {
     "student": "Qwen/Qwen2.5-VL-3B-Instruct"
+    
   },
   "training": {
+    "reward_funcs":["multi_box_format_reward","multi_gaussian_point","multi_gaussian_plane_reward"],
     "deepspeed":"configs/accelerate_config/stage3.json",
     "output_dir": "./result/",
     "max_length": 4096,
