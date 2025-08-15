@@ -11,7 +11,7 @@
     "reward_funcs":["multi_box_format_reward","multi_gaussian_point","multi_gaussian_plane_reward"],
     "deepspeed":"configs/accelerate_config/stage3.json",
     "output_dir": "./result/",
-    "max_length": 4096,
+    "max_length": 1024,
     "num_train_epochs": 1,
     "per_device_train_batch_size": 8,
     "roll_out_num": 8,
