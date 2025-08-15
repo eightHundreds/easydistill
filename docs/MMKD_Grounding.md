@@ -130,34 +130,24 @@ easydistill --config configs/mmkd_rl_grounding.json
 #### 1. 高斯点奖励（Gaussian Point Reward）
 - **作用**：衡量预测中心与目标元素中心的精确对齐程度，鼓励精确定位。
 - **公式**：
-  $$
-  R_{\text{point}} = \exp\left(-\frac{1}{2}\left(\frac{(c_x^p - c_x^{gt})^2}{\sigma_x^{gt^2}} + \frac{(c_y^p - c_y^{gt})^2}{\sigma_y^{gt^2}}\right)\right)
-  $$
-  - $ (c_x^p, c_y^p) $：预测框中心坐标
-  - $ (c_x^{gt}, c_y^{gt}) $：真实框中心坐标
-  - $ \sigma_x^{gt}, \sigma_y^{gt} $：真实框高斯分布在x/y方向的标准差
+  $$R_{\text{point}} = \exp\left(-\frac{1}{2}\left(\frac{(c_x^p - c_x^{gt})^2}{\sigma_x^{gt^2}} + \frac{(c_y^p - c_y^{gt})^2}{\sigma_y^{gt^2}}\right)\right)$$
+  - $$(c_x^p, c_y^p)$$：预测框中心坐标
+  - $(c_x^{gt}, c_y^{gt}) $：真实框中心坐标
+  - $\sigma_x^{gt}, \sigma_y^{gt} $：真实框高斯分布在x/y方向的标准差
 
 #### 2. 高斯覆盖奖励（Gaussian Coverage Reward）
 - **作用**：评估预测高斯分布与真实高斯分布的空间重叠程度，确保区域覆盖。
 - **公式**（基于Bhattacharyya系数）：
-  $$
-  R_{\text{coverage}} = \exp\left(-\frac{1}{8}(\mu_p - \mu_{gt})^T \Sigma^{-1} (\mu_p - \mu_{gt}) - \frac{1}{2} \ln\frac{|\Sigma|}{\sqrt{|\Sigma_p||\Sigma_{gt}|}}\right)
-  $$
-  - $ \mu_p, \mu_{gt} $：预测/真实分布的均值向量
-  - $ \Sigma_p, \Sigma_{gt} $：预测/真实分布的协方差矩阵
-  - $ \Sigma = \frac{\Sigma_p + \Sigma_{gt}}{2} $：平均协方差矩阵
+  $$R_{\text{coverage}} = \exp\left(-\frac{1}{8}(\mu_p - \mu_{gt})^T \Sigma^{-1} (\mu_p - \mu_{gt}) - \frac{1}{2} \ln\frac{|\Sigma|}{\sqrt{|\Sigma_p||\Sigma_{gt}|}}\right)$$
+  - $\mu_p, \mu_{gt} $：预测/真实分布的均值向量
+  - $\Sigma_p, \Sigma_{gt} $：预测/真实分布的协方差矩阵
+  - $\Sigma = \frac{\Sigma_p + \Sigma_{gt}}{2} $：平均协方差矩阵
 
 #### 3. 格式奖励（Format Reward）(可选)
 
 - **作用**：确保模型输出的坐标格式严格符合 `[x1,y1,x2,y2]` 的四数值格式，避免因格式错误导致任务失败。
 - **公式**（二元奖励）：
-  $$
-  R_{\text{format}} = 
-  \begin{cases} 
-  1, & \text{若输出严格为四数值坐标} [x1,y1,x2,y2] \\
-  0, & \text{否则}
-  \end{cases}
-  $$
+- $$R_{\text{format}} = 1,  \text{若输出符合检测框格式} [x1,y1,x2,y2] ，\text{否则} R_{\text{format}} = 0$$
 
 
 
