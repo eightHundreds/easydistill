@@ -99,7 +99,7 @@ We have a series of technical articles on the functionalities of EasyDistill.
     }
     ```
 
-## DistilQWen Series
+## DistilQwen Series
 
 The **DistilQwen** models represent a robust suite of distilled language models derived from the **EasyDistill** toolkit. Designed to capitalize on the principles of knowledge distillation, DistilQwen models offer a significant reduction in model size while maintaining high performance, making them ideal for resource-constrained environments. Whether you're aiming for efficient deployment in industrial scenarios or seeking to explore advanced KD methodologies, **DistilQwen** models are poised to meet diverse application needs with agility and precision.
 
