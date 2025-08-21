@@ -172,9 +172,8 @@ Reward Function Details
   **Purpose**: Measures the degree of alignment between predicted box center and ground truth center to encourage precise localization.
 - **公式**：  
   **Formula**:  
-  $$
-  R_{\text{point}} = \exp\left(-\frac{1}{2}\left(\frac{(c_x^p - c_x^{gt})^2}{\sigma_x^{gt^2}} + \frac{(c_y^p - c_y^{gt})^2}{\sigma_y^{gt^2}}\right)\right)
-  $$
+  $$R_{\text{point}} = \exp\left(-\frac{1}{2}\left(\frac{(c_x^p - c_x^{gt})^2}{\sigma_x^{gt^2}} + \frac{(c_y^p - c_y^{gt})^2}{\sigma_y^{gt^2}}\right)\right)$$
+
   - $$(c_x^p, c_y^p)$$：预测框中心坐标  
     $$(c_x^p, c_y^p)$$: Predicted box center coordinates  
   - $$(c_x^{gt}, c_y^{gt})$$：真实框中心坐标  
@@ -190,9 +189,8 @@ Reward Function Details
   **Purpose**: Measures spatial overlap between predicted and ground-truth Gaussian distributions to ensure coverage.
 - **公式**（基于Bhattacharyya系数）：  
   **Formula** (based on Bhattacharyya coefficient):  
-  $$
-  R_{\text{coverage}} = \exp\left(-\frac{1}{8}(\mu_p - \mu_{gt})^T \Sigma^{-1} (\mu_p - \mu_{gt}) - \frac{1}{2} \ln\frac{|\Sigma|}{\sqrt{|\Sigma_p||\Sigma_{gt}|}}\right)
-  $$
+  $$R_{\text{coverage}} = \exp\left(-\frac{1}{8}(\mu_p - \mu_{gt})^T \Sigma^{-1} (\mu_p - \mu_{gt}) - \frac{1}{2} \ln\frac{|\Sigma|}{\sqrt{|\Sigma_p||\Sigma_{gt}|}}\right)$$
+  
   - $$\mu_p, \mu_{gt}$$：预测/真实分布的均值向量  
     $$\mu_p, \mu_{gt}$$: Mean vector of predicted / ground-truth distribution  
   - $$\Sigma_p, \Sigma_{gt}$$：预测/真实分布的协方差矩阵  
