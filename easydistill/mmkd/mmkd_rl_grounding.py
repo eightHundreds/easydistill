@@ -103,7 +103,6 @@ import yaml
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Union
 import torch
-
 import ast
 
 # Logging setup
@@ -564,13 +563,12 @@ class VLMGRPOTrainer(Trainer):
             processing_cls = self.vlm_module.get_processing_class()
             processing_class = processing_cls.from_pretrained(model_id, padding_side="left", trust_remote_code=model_init_kwargs.get("trust_remote_code", None))
             processing_class.tokenizer.padding_side  = 'left'
-            
+
             for processing_keyword in self.vlm_module.get_custom_processing_keywords():
                 if processing_keyword in kwargs:
                     setattr(processing_class, processing_keyword, kwargs[processing_keyword])
             processing_class.tokenizer.padding_side  = 'left'
             if getattr(processing_class, "tokenizer",  None) is not None:
-
                 pad_token_id = processing_class.tokenizer.pad_token_id
                 processing_class.pad_token_id = pad_token_id
                 processing_class.eos_token_id = processing_class.tokenizer.eos_token_id
@@ -726,7 +724,6 @@ class VLMGRPOTrainer(Trainer):
         use_reentrant = (
             "use_reentrant" not in gradient_checkpointing_kwargs or gradient_checkpointing_kwargs["use_reentrant"]
         )
-
         if use_reentrant:
             model.enable_input_require_grads()
 
@@ -793,7 +790,6 @@ class VLMGRPOTrainer(Trainer):
                 except:
                     pass
                 images.append(img)
-                
 
         prompt_inputs = self.vlm_module.prepare_model_inputs(
             self.processing_class,
@@ -805,7 +801,6 @@ class VLMGRPOTrainer(Trainer):
             add_special_tokens=False,
         )
         prompt_inputs = super()._prepare_inputs(prompt_inputs)
-
         prompt_ids, prompt_mask = prompt_inputs["input_ids"], prompt_inputs["attention_mask"]
 
         # Generate completions
@@ -839,7 +834,6 @@ class VLMGRPOTrainer(Trainer):
         multimodal_keywords = self.vlm_module.get_custom_multimodal_keywords()
         multimodal_inputs = {k: prompt_inputs[k] if k in prompt_inputs else None for k in multimodal_keywords}
         with torch.no_grad():
-
             if self.num_iterations > 1:
                 old_per_token_logps = self._get_per_token_logps(
                     model, prompt_completion_ids, attention_mask, **multimodal_inputs
@@ -894,22 +888,16 @@ class VLMGRPOTrainer(Trainer):
                         reward_kwargs[key].extend([example[key]])
                 output_reward_func = reward_func(prompts=prompts, completions=completions, **reward_kwargs)
                 if output_reward_func and isinstance(output_reward_func[0], tuple):
-        
                     reward_values = [r[1] for r in output_reward_func]  
                     reward_types = [r[0] for r in output_reward_func]   
-       
                     unique_types = set(reward_types)
-                    
             
                     if not hasattr(self, '_reward_by_type'):
                         self._reward_by_type = {}
-                    
               
                     for reward_type in unique_types:
-                
                         indices = [i for i, t in enumerate(reward_types) if t == reward_type]
                         type_values = [reward_values[i] for i in indices]
-                        
                         type_tensor = torch.tensor(type_values, dtype=torch.float32, device=device)
                         
                         if reward_type not in self._reward_by_type:
@@ -955,7 +943,6 @@ class VLMGRPOTrainer(Trainer):
             self._metrics[f"rewards/{reward_func_name}"].append(reward_per_func[i].item())
             
         if hasattr(self, '_reward_by_type'):
-
             local_data = []
             for reward_type, data_list in self._reward_by_type.items():
                 for data in data_list:
@@ -977,7 +964,6 @@ class VLMGRPOTrainer(Trainer):
 
             for reward_type, tensors in type_to_tensors.items():
                 if tensors:
-
                     all_values = torch.cat(tensors)
                     mean_value = all_values.mean().item()
                     
@@ -990,7 +976,6 @@ class VLMGRPOTrainer(Trainer):
             delattr(self, '_reward_by_type')
 
         self._metrics["reward"].append(self.accelerator.gather_for_metrics(rewards).mean().item())
-
         self._metrics["reward_std"].append(self.accelerator.gather_for_metrics(std_grouped_rewards).mean().item())
 
         return {
@@ -1326,7 +1311,7 @@ def gaussian_plane_reward(completions, solution, **kwargs):
             return 0.0
         bhattacharyya_distance = term1 + term2
 
-        # 转换为奖励
+        # compute rewards
         plane_reward = np.exp(-bhattacharyya_distance)
         plane_reward = round(plane_reward,3)
         return plane_reward
@@ -1346,7 +1331,6 @@ def gaussian_plane_reward(completions, solution, **kwargs):
         except Exception:
             print(Exception, content, sol)
             pass  
-        
         rewards.append(reward)
     return rewards
 
@@ -1387,13 +1371,11 @@ def gaussian_point_reward(completions, solution, **kwargs):
                 bbox = [float(bbox_match.group(1)), float(bbox_match.group(2)), float(bbox_match.group(3)), float(bbox_match.group(4))]
                 sol = [float(num) for num in sol]
                 reward = g_point_reward(bbox, sol)
-
         except Exception:
             print(Exception, content, sol)
             pass  
         
         rewards.append(reward)
-       
     return rewards
 
 
@@ -1401,9 +1383,7 @@ def format_reward(completions, **kwargs):
     """Reward function that checks if the completion has a specific format."""
     pattern = r"\[\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\]"
     completion_contents = [completion[0]["content"] for completion in completions]
-
     matches = [re.fullmatch(pattern, content.split('assistant\n')[-1], re.DOTALL) for content in completion_contents]
-                
     return [1.0 if match else 0.0 for match in matches]
 
 def point_format_reward(completions, **kwargs):
@@ -1412,12 +1392,9 @@ def point_format_reward(completions, **kwargs):
     
     for completion in completions:
         try:
-
             content = completion[0]["content"]
             json_str = content.split('assistant\n')[-1].strip()
-            
             json_str=json_str.replace("```json","").replace("```","")
-            
             parsed_data = json.loads(json_str)
             
             if not isinstance(parsed_data, list):
@@ -1426,14 +1403,11 @@ def point_format_reward(completions, **kwargs):
                 
             valid = True
             for item in parsed_data:
-                    
                 point_2d = item["Point_2d"]
                 if not isinstance(point_2d, list) or len(point_2d) != 2 or not all(isinstance(x, int) for x in point_2d):
                     valid = False
                     break
-            
             rewards.append(1.0 if valid else 0.0)
-            
         except (json.JSONDecodeError, KeyError, IndexError, TypeError):
             rewards.append(0.0)
     
@@ -1459,7 +1433,6 @@ def multi_box_format_reward(completions, **kwargs):
     return rewards
 
 def iou(box1, box2):
-    
     x1_1, y1_1, x2_1, y2_1 = box1
     x1_2, y1_2, x2_2, y2_2 = box2
     
@@ -1597,8 +1570,6 @@ def multi_gaussian_point_reward(completions, solution, **kwargs):
             rewards.append(reward)
         except (SyntaxError, NameError,json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError):
             rewards.append(0.0)
-            
-        
     return rewards
 
 def multi_gaussian_plane_reward(completions, solution, **kwargs):
@@ -1680,7 +1651,6 @@ def multi_gaussian_plane_reward(completions, solution, **kwargs):
     return rewards
 
 def object_to_dict(obj):
-
     return {key: value for key, value in obj.__dict__.items()}
 
 reward_funcs_registry = {
@@ -1709,7 +1679,6 @@ def main(script_args, training_args, model_args):
     dataset = LazySupervisedDataset(script_args.dataset_name, script_args)
     trainer_cls = VLMGRPOTrainer
     # Initialize the GRPO trainer
-   
 
     trainer = trainer_cls(
         model=model_args.model_name_or_path,
@@ -1726,7 +1695,6 @@ def main(script_args, training_args, model_args):
         max_anyres_num=script_args.max_anyres_num,
         torch_dtype=model_args.torch_dtype,
     )
-    
     trainer.train()
 
     trainer.save_model(training_args.output_dir)
