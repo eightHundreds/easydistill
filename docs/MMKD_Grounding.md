@@ -209,12 +209,8 @@ Reward Function Details
   **Purpose**: Ensures model output strictly matches the four-value `[x1, y1, x2, y2]` box format to avoid failures due to format errors.
 - **公式**（二元奖励）：  
   **Formula** (binary reward):  
-  $$
-  R_{\text{format}} = 1, \text{ 若输出符合检测框格式 } [x1,y1,x2,y2] ，\text{否则} R_{\text{format}} = 0
-  $$
-  $$
-  R_{\text{format}} = 1 \text{ if the output format is } [x1, y1, x2, y2], \text{ otherwise } R_{\text{format}} = 0
-  $$
+
+  $$R_{\text{format}} = 1,  \text{若输出符合检测框格式} [x1,y1,x2,y2] ，\text{否则} R_{\text{format}} = 0$$
 
 ---
 
