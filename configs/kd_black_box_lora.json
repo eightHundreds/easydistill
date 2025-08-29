@@ -1,0 +1,35 @@
+{
+  "job_type": "kd_black_box",
+  "dataset": {
+    "instruction_path": "data/alpaca_en_demo.json",
+    "labeled_path": "data/alpaca_en_demo_labeled.json",
+    "template" : "./chat_template/chat_template_kd.jinja",
+    "system_prompt": "You are a helpful assistant.",
+    "seed": 42
+  },
+  "lora": {
+    "enable": true,
+    "r": 16,
+    "alpha": 32,
+    "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    "dropout": 0.1,
+    "bias": "none",
+    "save_merged_model": false
+  },
+  "models": {
+    "student": "student/Qwen/Qwen2.5-0.5B-Instruct/"
+  },
+  "training": {
+    "output_dir": "./result_lora/",
+    "num_train_epochs": 3,
+    "per_device_train_batch_size": 4,
+    "gradient_accumulation_steps": 2,
+    "max_length":512,
+    "save_steps": 1000,
+    "logging_steps": 1,
+    "learning_rate": 5e-4,
+    "weight_decay": 0.05,
+    "warmup_ratio": 0.1,
+    "lr_scheduler_type": "cosine"
+  }
+}

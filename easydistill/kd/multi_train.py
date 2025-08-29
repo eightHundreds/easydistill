@@ -12,6 +12,42 @@ import jsonlines
 import numpy as np
 import torch.nn.functional as F
 
+# PEFT 相关导入
+try:
+    from peft import LoraConfig, get_peft_model, PeftModel
+    PEFT_AVAILABLE = True
+except ImportError:
+    logging.warning("PEFT not available. LoRA training will be disabled.")
+    PEFT_AVAILABLE = False
+
+
+def setup_lora_model(model, lora_config):
+    """设置 LoRA 模型"""
+    if not PEFT_AVAILABLE:
+        logging.error("PEFT is not available. Please install peft library: pip install peft")
+        raise ImportError("PEFT library is required for LoRA training")
+    
+    if not lora_config.get("enable", False):
+        logging.info("LoRA is disabled in config")
+        return model
+    
+    # 创建 LoRA 配置
+    peft_config = LoraConfig(
+        r=lora_config.get("r", 16),
+        lora_alpha=lora_config.get("alpha", 32),
+        target_modules=lora_config.get("target_modules", ["q_proj", "v_proj", "k_proj", "o_proj"]),
+        lora_dropout=lora_config.get("dropout", 0.1),
+        bias=lora_config.get("bias", "none"),
+        task_type="CAUSAL_LM"
+    )
+    
+    # 应用 LoRA 到模型
+    model = get_peft_model(model, peft_config)
+    model.print_trainable_parameters()
+    
+    logging.info(f"LoRA configured with r={peft_config.r}, alpha={peft_config.lora_alpha}")
+    return model
+
 
 def formatting_func(examples):
     """
@@ -147,6 +183,10 @@ def train_multi(config):
     # Student setup
     student_tokenizer = AutoTokenizer.from_pretrained(config["models"]["student"], trust_remote_code=True)
     student_model = AutoModelForCausalLM.from_pretrained(config["models"]["student"], trust_remote_code=True)
+    
+    # 设置 LoRA（如果配置中启用）
+    if "lora" in config:
+        student_model = setup_lora_model(student_model, config["lora"])
     # Template
     global template, global_config
     global_config = config  # 使formatting_func能够访问配置
@@ -181,8 +221,24 @@ def train_multi(config):
     )
     # Train and save
     trainer.train()
-    trainer.save_model(config["training"]["output_dir"])
-    student_tokenizer.save_pretrained(config["training"]["output_dir"])
+    
+    # 保存模型
+    output_dir = config["training"]["output_dir"]
+    if "lora" in config and config["lora"].get("enable", False):
+        # 如果使用 LoRA，保存适配器
+        trainer.model.save_pretrained(output_dir)
+        logging.info(f"LoRA adapters saved to {output_dir}")
+        
+        # 也可以选择合并并保存完整模型
+        if config["lora"].get("save_merged_model", False):
+            merged_model = trainer.model.merge_and_unload()
+            merged_model.save_pretrained(os.path.join(output_dir, "merged_model"))
+            logging.info(f"Merged model saved to {os.path.join(output_dir, 'merged_model')}")
+    else:
+        # 常规全参数模型保存
+        trainer.save_model(output_dir)
+    
+    student_tokenizer.save_pretrained(output_dir)
 
 
 def main():
