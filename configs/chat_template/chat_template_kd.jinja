@@ -1,4 +1,4 @@
-{{'<|im_start|>system\nYou are a helpful assistant.<|im_end|>'}}
+{{'<|im_start|>system\n' + (system_prompt | default('You are a helpful assistant.')) + '<|im_end|>'}}
 {{'<|im_start|>user\n' + message['content'] + '<|im_end|>'-}}
 {% if add_generation_prompt %}
   {{'<|im_start|>assistant'-}}

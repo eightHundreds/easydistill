@@ -5,7 +5,7 @@
     "labeled_path": "train_labeled.json",
     "logits_path": "./logits.json",
     "template" : "./chat_template/chat_template_kd.jinja",
-    "system_prompt": "You are a helpful assistant.",
+    "system_prompt": "You are an expert programming assistant that provides accurate and helpful code solutions.",
     "seed": 42
   },
   "inference":{

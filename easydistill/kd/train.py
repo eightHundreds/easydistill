@@ -69,29 +69,48 @@ class DistillSFTTrainer(SFTTrainer):
     
 
     def _compute_white_box_distillation_loss(self, student_logits: torch.Tensor, teacher_logits: torch.Tensor, labels: Optional[torch.Tensor]):
+        """计算白盒蒸馏损失
+        
+        Args:
+            student_logits: 学生模型的logits张量，形状为(batch_size, seq_len, vocab_size)
+            teacher_logits: 教师模型的logits张量，已转换为概率分布
+            labels: 标签张量，用于生成掩码，-100表示需要忽略的位置
+            
+        Returns:
+            torch.Tensor: 计算得到的蒸馏损失
+        """
+        # 截断学生logits到指定的最大序列长度
         student_logits = student_logits[:, :self.max_seq_length, :]
+        
+        # 对齐教师概率分布的维度，确保与学生logits形状匹配
         teacher_probs = teacher_logits[:, :student_logits.size(1), :student_logits.size(-1)]
+        
+        # 创建掩码：标签不为-100的位置为1，否则为0
+        # 掩码用于只在有效token位置计算损失
         mask = (labels != -100).float() if labels is not None else torch.ones_like(student_logits[:, :, 0])
         
         if self.distillation_type == "forward_kld":
-            # Forward KLD: student learns from teacher (original implementation)
+            # 前向KL散度：学生学习教师的分布
+            # KL(teacher || student) = sum(teacher * log(teacher/student))
             loss = F.kl_div(
-                F.log_softmax(student_logits, dim=-1),
-                teacher_probs,
-                reduction='none',
-                log_target=False
-            ).sum(dim=-1)/torch.sum(mask.view(-1), dim=0) 
+                F.log_softmax(student_logits, dim=-1),  # 学生分布的对数概率
+                teacher_probs,  # 教师分布的概率
+                reduction='none',  # 不进行维度约减
+                log_target=False  # teacher_probs不是对数形式
+            ).sum(dim=-1) / torch.sum(mask.view(-1), dim=0)  # 按词汇维度求和，并归一化
         elif self.distillation_type == "reverse_kld":
-            # Reverse KLD: teacher provides certainty to student
+            # 反向KL散度：教师为学生提供确定性指导
+            # KL(student || teacher) = sum(student * log(student/teacher))
             loss = F.kl_div(
-                torch.log(teacher_probs.clamp(min=1e-10)),  # avoid log(0)
-                F.softmax(student_logits, dim=-1),
-                reduction='none',
-                log_target=False
-            ).sum(dim=-1)/torch.sum(mask.view(-1), dim=0) 
+                torch.log(teacher_probs.clamp(min=1e-10)),  # 教师分布的对数概率，避免log(0)
+                F.softmax(student_logits, dim=-1),  # 学生分布的概率
+                reduction='none',  # 不进行维度约减
+                log_target=False  # 学生概率不是对数形式
+            ).sum(dim=-1) / torch.sum(mask.view(-1), dim=0)  # 按词汇维度求和，并归一化
         else:
-            raise ValueError(f"Unsupported distillation type: {self.distillation_type}. Use 'forward_kld' or 'reverse_kld'")
+            raise ValueError(f"不支持的蒸馏类型: {self.distillation_type}. 请使用 'forward_kld' 或 'reverse_kld'")
             
+        # 应用掩码并计算平均损失，只在有效token位置计算损失
         return (loss * mask).sum() / mask.sum()
 
 
@@ -113,24 +132,47 @@ class DistillSFTTrainer(SFTTrainer):
 
 
     def compute_loss(self, model: PreTrainedModel, inputs: Dict[str, torch.Tensor], return_outputs=False, num_items_in_batch=None):
+        """计算训练损失，包括语言模型损失和蒸馏损失
+        
+        Args:
+            model: 学生模型
+            inputs: 输入数据字典，包含input_ids和labels
+            return_outputs: 是否返回模型输出
+            num_items_in_batch: 批次中的项目数量
+            
+        Returns:
+            total_loss: 总损失
+            outputs: 模型输出（如果return_outputs=True）
+        """
+        # 通过学生模型前向传播获取输出和语言模型损失
         outputs = model(**inputs)
         lm_loss = outputs.loss
+        
+        # 如果指定了教师模型logits目录，进行白盒蒸馏
         if self.logits_dir:
+            # 加载对应的教师模型logits数据
             teacher_logits = self._load_teacher_logits(
-                batch_size=inputs['input_ids'].size(0),
-                it=self.state.global_step,
-                dp_rank=torch.distributed.get_rank() if torch.distributed.is_initialized() else 0,
-                device=model.device,
-                no_model_batch={'label': inputs.get('labels', None)}
+                batch_size=inputs['input_ids'].size(0),  # 当前批次大小
+                it=self.state.global_step,  # 当前训练步数
+                dp_rank=torch.distributed.get_rank() if torch.distributed.is_initialized() else 0,  # 数据并行rank
+                device=model.device,  # 设备
+                no_model_batch={'label': inputs.get('labels', None)}  # 标签信息用于对齐
             )
+            
+            # 计算白盒蒸馏损失（学生logits与教师logits的KL散度）
             distil_loss = self._compute_white_box_distillation_loss(
-                student_logits=outputs.logits,
-                teacher_logits=teacher_logits,
-                labels=inputs.get('labels', None)
+                student_logits=outputs.logits,  # 学生模型的logits
+                teacher_logits=teacher_logits,  # 教师模型的logits
+                labels=inputs.get('labels', None)  # 用于创建掩码，只在输出token位置计算损失
             )
+            
+            # 组合损失：(1-kd_ratio)*语言模型损失 + kd_ratio*蒸馏损失
             total_loss = (1 - self.kd_ratio) * lm_loss + self.kd_ratio * distil_loss
         else:
+            # 没有教师模型时，只使用语言模型损失
             total_loss = lm_loss
+            
+        # 根据return_outputs参数决定返回格式
         return (total_loss, outputs) if return_outputs else total_loss
 
 
@@ -138,8 +180,11 @@ def formatting_func(examples):
     env = Environment(loader=BaseLoader())
     try:
         message = {"content": examples["instruction"],"output":examples["output"]}
+        # 从全局配置中获取system_prompt，如果没有则使用默认值
+        system_prompt = global_config.get("dataset", {}).get("system_prompt", "You are a helpful assistant.")
         full_text = template.render(
             message=message,
+            system_prompt=system_prompt,
             add_generation_prompt=False,
             add_output=True
         )
@@ -161,7 +206,8 @@ def train(config):
         trust_remote_code=True
     )
 
-    global template
+    global template, global_config
+    global_config = config  # 使formatting_func能够访问配置
     full_path = config["dataset"]["template"]
     template_dir = os.path.dirname(full_path)
     template_file = os.path.basename(full_path)

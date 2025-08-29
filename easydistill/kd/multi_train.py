@@ -19,8 +19,11 @@ def formatting_func(examples):
     """
     try:
         message = {"content": examples["instruction"], "output": examples["output"]}
+        # 从全局配置中获取system_prompt，如果没有则使用默认值
+        system_prompt = global_config.get("dataset", {}).get("system_prompt", "You are a helpful assistant.")
         full_text = template.render(
             message=message,
+            system_prompt=system_prompt,
             add_generation_prompt=False,
             add_output=True
         )
@@ -145,7 +148,8 @@ def train_multi(config):
     student_tokenizer = AutoTokenizer.from_pretrained(config["models"]["student"], trust_remote_code=True)
     student_model = AutoModelForCausalLM.from_pretrained(config["models"]["student"], trust_remote_code=True)
     # Template
-    global template
+    global template, global_config
+    global_config = config  # 使formatting_func能够访问配置
     tpl = config["dataset"]["template"]
     tpl_dir, tpl_file = os.path.split(tpl)
     env = Environment(loader=FileSystemLoader(tpl_dir))
